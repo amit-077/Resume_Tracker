@@ -42,23 +42,35 @@ document.addEventListener("mouseup", function () {
             // Fetch user data from Chrome storage
             chrome?.storage?.local.get("userData", function (result) {
                 if (result.userData) {
-                    fetch("http://localhost:5000/short", {
+                    fetch("https://pingit.vercel.app/short", {
                         method: "POST",
+                        mode: "cors", // Ensures cross-origin requests
                         headers: {
                             "Content-Type": "application/json",
+                            "Accept": "application/json",
                         },
                         body: JSON.stringify({
                             companyName: selectedText,
-                            email: result.userData.input1,
-                            resumeLink: result.userData.input2
+                            email: result?.userData?.input1,  // Ensure safe access
+                            resumeLink: result?.userData?.input2
                         }),
                     })
-                    .then(response => response.json())
-                    .then((data) => {
-                        navigator.clipboard.writeText(data.shortURL);
-                        showToast("Copied!!", false);
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
                     })
-                    .catch(error => console.error("Error:", error));
+                    .then((data) => {
+                        if (data?.shortURL) {
+                            navigator.clipboard.writeText(data.shortURL);
+                            showToast("Copied!!", false);
+                        } else {
+                            console.error("No shortURL in response:", data);
+                        }
+                    })
+                    .catch(error => console.error("Fetch error:", error));
+                    
 
                     setTimeout(() => {
                         removeExistingButton();
