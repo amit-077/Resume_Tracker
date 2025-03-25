@@ -27,10 +27,13 @@ document.addEventListener("mouseup", function () {
         button.style.cursor = "pointer";
         button.style.fontSize = "14px";
         button.style.boxShadow = "0 2px 5px rgba(0, 0, 0, 0.2)";
+        button.style.display = "flex";
+        button.style.alignItems = "center";
+        button.style.justifyContent = "center";
+        button.style.gap = "6px";
 
         document.body.appendChild(button);
 
-        // ✅ Remove existing listener before adding a new one
         document.removeEventListener("click", handleOutsideClick);
         setTimeout(() => {
             document.addEventListener("click", handleOutsideClick);
@@ -38,20 +41,21 @@ document.addEventListener("mouseup", function () {
 
         button.addEventListener("mousedown", function (event) {
             event.preventDefault(); // Prevent losing selection
+            showLoading(button); // Show loader
 
             // Fetch user data from Chrome storage
             chrome?.storage?.local.get("userData", function (result) {
                 if (result.userData) {
-                    fetch("https://pingit.vercel.app/short", {
+                    fetch("https://visly.vercel.app/short", {
                         method: "POST",
-                        mode: "cors", // Ensures cross-origin requests
+                        mode: "cors",
                         headers: {
                             "Content-Type": "application/json",
                             "Accept": "application/json",
                         },
                         body: JSON.stringify({
                             companyName: selectedText,
-                            email: result?.userData?.input1,  // Ensure safe access
+                            email: result?.userData?.input1,
                             resumeLink: result?.userData?.input2
                         }),
                     })
@@ -65,23 +69,55 @@ document.addEventListener("mouseup", function () {
                         if (data?.shortURL) {
                             navigator.clipboard.writeText(data.shortURL);
                             showToast("Copied!!", false);
+                            hideLoading(button); // Restore button after copying
                         } else {
                             console.error("No shortURL in response:", data);
+                            showToast("Error copying!", true);
+                            hideLoading(button);
                         }
                     })
-                    .catch(error => console.error("Fetch error:", error));
-                    
-
-                    setTimeout(() => {
-                        removeExistingButton();
-                    }, 50);
+                    .catch(error => {
+                        console.error("Fetch error:", error);
+                        showToast("Error fetching!", true);
+                        hideLoading(button);
+                    });
                 } else {
                     showToast("No data found!", true);
+                    hideLoading(button);
                 }
             });
         });
     }
 });
+
+// ✅ Function to show loader inside button
+function showLoading(button) {
+    button.disabled = true;
+    button.innerHTML = `<div class="loader"></div> Loading...`;
+
+    // Add loader styles
+    const style = document.createElement("style");
+    style.textContent = `
+        .loader {
+            width: 12px;
+            height: 12px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// ✅ Function to restore button after copying
+function hideLoading(button) {
+    button.disabled = false;
+    button.innerHTML = "Copy Link";
+}
 
 // ✅ Function to remove existing button
 function removeExistingButton() {
